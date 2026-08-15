@@ -22,6 +22,7 @@ android {
         signingConfigs {
             create("release") {
                 storeFile = file(ksPath)
+                storeType = "PKCS12"
                 storePassword = System.getenv("MOYU_KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("MOYU_KEY_ALIAS")
                 keyPassword = System.getenv("MOYU_KEY_PASSWORD")
