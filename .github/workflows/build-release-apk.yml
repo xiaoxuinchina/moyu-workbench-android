@@ -39,9 +39,9 @@ jobs:
           MOYU_KEY_PASSWORD: ${{ secrets.MOYU_KEY_PASSWORD }}
         run: gradle :app:assembleRelease
       - name: Rename APK
-        run: cp app/build/outputs/apk/release/app-release.apk "摸鱼工作台-v1.0.0.apk"
+        run: cp app/build/outputs/apk/release/app-release.apk "摸鱼工作台-v1.0.1.apk"
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: 摸鱼工作台-v1.0.0
-          path: 摸鱼工作台-v1.0.0.apk
+          name: 摸鱼工作台-v1.0.1
+          path: 摸鱼工作台-v1.0.1.apk
