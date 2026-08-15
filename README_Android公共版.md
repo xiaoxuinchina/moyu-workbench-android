@@ -1,13 +1,22 @@
-# 摸鱼工作台 Android v1.0.1
+# 摸鱼工作台 Android v1.0.2
 
-更新内容：
-- versionCode 2 / versionName 1.0.1
-- 与 v1.0.0 使用相同 applicationId：com.moyu.workbench
-- 继续使用同一套固定 PKCS12 签名 Secrets，可直接覆盖安装并保留原数据
-- 新增 WebView 文件选择器支持，允许用户从手机相册上传专属头像
-- 迁移流程改为静默检测；成功后只显示“已迁移 X 条记录”
-- 迁移采用合并策略，不覆盖新版里已有记录
-- 迁移成功后自动清除剪贴板中的迁移包，避免再次检测
+核心修复：迁移不再依赖系统剪贴板。
 
-部署：
-覆盖上传到 moyu-workbench-android，GitHub Actions 会生成 摸鱼工作台-v1.0.1.apk。
+迁移流程：
+旧 爱摸鱼的XCL v3.0.9
+→ 将记录压缩为 gzip
+→ Base64URL 编码
+→ moyuwb://import 深链接携带数据
+→ 摸鱼工作台 v1.0.2 直接接收并解压
+→ 合并到 moyu-workbench-v1
+→ 提示“已迁移 X 条记录”
+
+兼容：
+仍保留 clipboard 模式，用于兼容旧迁移补丁。
+
+版本：
+versionCode = 3
+versionName = 1.0.2
+applicationId = com.moyu.workbench
+
+固定签名不变，可覆盖安装 v1.0.0 / v1.0.1 并保留已有数据。

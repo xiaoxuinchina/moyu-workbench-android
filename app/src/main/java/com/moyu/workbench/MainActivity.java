@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.util.Base64;
 import android.os.Bundle;
 import android.view.View;
 import android.webkit.GeolocationPermissions;
@@ -20,6 +21,10 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.zip.GZIPInputStream;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -49,18 +54,46 @@ public class MainActivity extends Activity {
     @Override protected void onNewIntent(Intent intent){ super.onNewIntent(intent); setIntent(intent); processIntent(intent); }
 
     private void processIntent(Intent intent){
-        if(intent==null||intent.getData()==null)return; Uri uri=intent.getData();
+        if(intent==null||intent.getData()==null)return;
+        Uri uri=intent.getData();
         if("moyuwb".equalsIgnoreCase(uri.getScheme()) && "import".equalsIgnoreCase(uri.getHost())){
-            String source=uri.getQueryParameter("source"); if("clipboard".equals(source)) readMigrationFromClipboard();
+            String encoding=uri.getQueryParameter("encoding");
+            String directData=uri.getQueryParameter("data");
+
+            if("gzip-base64url".equals(encoding) && directData!=null && !directData.isEmpty()){
+                try{
+                    pendingMigrationJson=decodeGzipBase64Url(directData);
+                    if(pageReady)injectMigration();
+                    return;
+                }catch(Exception e){
+                    Toast.makeText(this,"迁移数据解析失败，请重试",Toast.LENGTH_LONG).show();
+                }
+            }
+
+            // 只作为兼容旧迁移补丁的备用方式。
+            String source=uri.getQueryParameter("source");
+            if("clipboard".equals(source))readMigrationFromClipboard();
         }
+    }
+
+    private String decodeGzipBase64Url(String encoded) throws Exception{
+        byte[] compressed=Base64.decode(encoded,Base64.URL_SAFE|Base64.NO_WRAP|Base64.NO_PADDING);
+        ByteArrayInputStream input=new ByteArrayInputStream(compressed);
+        GZIPInputStream gzip=new GZIPInputStream(input);
+        ByteArrayOutputStream output=new ByteArrayOutputStream();
+        byte[] buffer=new byte[8192];
+        int n;
+        while((n=gzip.read(buffer))>0)output.write(buffer,0,n);
+        gzip.close();
+        return output.toString("UTF-8");
     }
 
     private void readMigrationFromClipboard(){
         try{
             ClipboardManager cm=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
-            if(cm==null||!cm.hasPrimaryClip()||cm.getPrimaryClip()==null||cm.getPrimaryClip().getItemCount()==0){Toast.makeText(this,"未检测到迁移数据",Toast.LENGTH_LONG).show();return;}
+            if(cm==null||!cm.hasPrimaryClip()||cm.getPrimaryClip()==null||cm.getPrimaryClip().getItemCount()==0){Toast.makeText(this,"未收到旧版迁移数据，请使用旧版 v3.0.9 的迁移按钮重试",Toast.LENGTH_LONG).show();return;}
             CharSequence cs=cm.getPrimaryClip().getItemAt(0).coerceToText(this); String text=cs==null?"":cs.toString();
-            if(!text.startsWith(MIGRATION_PREFIX)){Toast.makeText(this,"剪贴板中没有有效迁移数据",Toast.LENGTH_LONG).show();return;}
+            if(!text.startsWith(MIGRATION_PREFIX)){Toast.makeText(this,"未收到有效迁移数据，请重新从旧版发起迁移",Toast.LENGTH_LONG).show();return;}
             pendingMigrationJson=text.substring(MIGRATION_PREFIX.length());
             if(pageReady) injectMigration();
         }catch(Exception e){Toast.makeText(this,"迁移读取失败",Toast.LENGTH_LONG).show();}
