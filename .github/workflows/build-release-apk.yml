@@ -1,0 +1,52 @@
+name: Build Signed Moyu Workbench APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.4.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.4.1"
+
+      - name: Restore release keystore
+        run: echo "${{ secrets.MOYU_KEYSTORE_BASE64 }}" | base64 --decode > "$GITHUB_WORKSPACE/app/moyu-release.jks"
+
+      - name: Build signed release APK
+        env:
+          MOYU_KEYSTORE_PATH: ${{ github.workspace }}/app/moyu-release.jks
+          MOYU_KEYSTORE_PASSWORD: ${{ secrets.MOYU_KEYSTORE_PASSWORD }}
+          MOYU_KEY_ALIAS: ${{ secrets.MOYU_KEY_ALIAS }}
+          MOYU_KEY_PASSWORD: ${{ secrets.MOYU_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/release/app-release.apk "摸鱼工作台-v1.0.0.apk"
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: 摸鱼工作台-v1.0.0
+          path: 摸鱼工作台-v1.0.0.apk
